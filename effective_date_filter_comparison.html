@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Effective Date Filter</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f9f9f9;
+      padding: 40px;
+    }
+    .card {
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
+      padding: 24px;
+      max-width: 600px;
+      margin: auto;
+      position: relative;
+    }
+    .tabs {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 0;
+    }
+    .tab {
+      cursor: pointer;
+      padding: 10px 20px;
+      border: none;
+      background: none;
+      font-size: 16px;
+      font-weight: bold;
+      border-bottom: 2px solid transparent;
+    }
+    .tab.active {
+      color: #4f704f;
+      border-color: #4f704f;
+    }
+    .tab-underline {
+      border-bottom: 1px solid #000;
+      margin-top: -4px;
+      margin-bottom: 8px;
+    }
+    .clear-under-tabs {
+      text-align: right;
+      margin-bottom: 16px;
+      margin-right: 6px;
+    }
+    .clear-under-tabs button {
+      background: none;
+      border: none;
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .presets {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .presets button {
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: 1px solid #999;
+      background: white;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .presets button.active {
+      background-color: #4f704f;
+      color: white;
+      border: 1px solid #4f704f;
+    }
+    .input-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .input-row input[type="date"] {
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      flex: 1;
+    }
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .checkbox-row label {
+      font-size: 14px;
+    }
+    .actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    .actions button {
+      padding: 10px 16px;
+      font-size: 14px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .cancel-btn {
+      background: none;
+      border: none;
+      color: #333;
+      font-weight: bold;
+    }
+    .apply-btn {
+      background: #6e936e;
+      color: white;
+      border: none;
+    }
+    .output {
+      margin-top: 20px;
+      font-style: italic;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+<div class="card" id="filter-modal">
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('live')">Live Filter</button>
+    <button class="tab" onclick="switchTab('hybrid')">Hybrid Filter</button>
+  </div>
+  <div class="tab-underline"></div>
+  <div class="clear-under-tabs">
+    <button onclick="clearFilters(currentTab)">× CLEAR FILTERS</button>
+  </div>
+
+  <div id="live" class="tab-content">
+    <div class="presets" id="live-presets"></div>
+    <div class="actions"></div>
+    <div class="output" id="live-output">Applied: None</div>
+  </div>
+
+  <div id="hybrid" class="tab-content" style="display:none">
+    <div class="presets" id="hybrid-presets"></div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="hybrid-toggle" onchange="toggleDates('hybrid')">
+      <label for="hybrid-toggle">Use exact dates</label>
+    </div>
+    <div class="input-row" id="hybrid-dates" style="display:none">
+      <input type="date" id="hybrid-from">
+      <input type="date" id="hybrid-to">
+    </div>
+    <div class="actions">
+      <button class="cancel-btn" onclick="closeFilterWindow()">✕ Cancel</button>
+      <button class="apply-btn" onclick="applyFilters('hybrid')">APPLY FILTERS</button>
+    </div>
+    <div class="output" id="hybrid-output">Applied: None</div>
+  </div>
+</div>
+<script>
+  const presets = ["in Next 30 days", "This Month", "Q3", "Overdue"];
+  let state = { live: '', hybrid: '' };
+  let currentTab = 'live';
+
+  function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.tab').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
+    document.querySelector(`.tab[onclick*="${tab}"]`).classList.add('active');
+    document.getElementById(tab).style.display = 'block';
+  }
+
+  function toggleDates(mode) {
+    const toggle = document.getElementById(`${mode}-toggle`);
+    const dateRow = document.getElementById(`${mode}-dates`);
+    if (!toggle || !dateRow) return;
+    const show = toggle.checked;
+    dateRow.style.display = show ? 'flex' : 'none';
+    if (show) {
+      state[mode] = '';
+      const output = document.getElementById(`${mode}-output`);
+      if (output) output.textContent = 'Applied: None';
+      renderPresets(mode);
+    }
+  }
+
+  function clearFilters(mode) {
+    state[mode] = '';
+    const output = document.getElementById(`${mode}-output`);
+    if (output) output.textContent = 'Applied: None';
+    const toggle = document.getElementById(`${mode}-toggle`);
+    if (toggle) toggle.checked = false;
+    toggleDates(mode);
+    const from = document.getElementById(`${mode}-from`);
+    const to = document.getElementById(`${mode}-to`);
+    if (from) from.value = '';
+    if (to) to.value = '';
+    renderPresets(mode);
+  }
+
+  function applyFilters(mode) {
+    const from = document.getElementById(`${mode}-from`);
+    const to = document.getElementById(`${mode}-to`);
+    const output = document.getElementById(`${mode}-output`);
+    let text = '';
+    if (from && to && from.value && to.value) {
+      text = `${from.value} to ${to.value}`;
+    } else if (state[mode]) {
+      text = state[mode];
+    }
+    if (output) output.textContent = `Applied: ${text || 'None'}`;
+  }
+
+  function renderPresets(mode) {
+    const container = document.getElementById(`${mode}-presets`);
+    if (!container) return;
+    container.innerHTML = '';
+    presets.forEach(p => {
+      const btn = document.createElement('button');
+      btn.textContent = p;
+      btn.className = state[mode] === p ? 'active' : '';
+      btn.onclick = () => {
+        state[mode] = p;
+        const toggle = document.getElementById(`${mode}-toggle`);
+        const dateRow = document.getElementById(`${mode}-dates`);
+        if (toggle) toggle.checked = false;
+        if (dateRow) dateRow.style.display = 'none';
+        renderPresets(mode);
+        const output = document.getElementById(`${mode}-output`);
+        if (output) output.textContent = `Applied: ${p}`;
+      };
+      container.appendChild(btn);
+    });
+  }
+
+  function closeFilterWindow() {
+    document.getElementById('filter-modal').style.display = 'none';
+  }
+
+  ['live', 'hybrid'].forEach(renderPresets);
+</script>
+</body>
+</html>
